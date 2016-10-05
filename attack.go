@@ -14,9 +14,33 @@ var numberOfZeros int
 // a counter to know how many queries were necessary
 var countQueries int
 
+// The private key used by our Oracle to try and decrypt:
+var test2048Key = &PrivateKey{
+	PublicKey: PublicKey{
+		N: fromBase10("74996017239120567164915083818865018336703341786730860076899"),
+		E: 65537,
+	},
+	D: fromBase10("5923056978953691130897057751249065056477792980755807347713"),
+	Primes: []*big.Int{
+		fromBase10("269171492412515202869949927361"),
+		fromBase10("278617979069590382200680986659"),
+	},
+}
+
+// The ciphertext we want to decipher, the commented one uses a private key found in utils.go in comments
+const (
+	//SHA256:	toDecipher  = "1a3cbcc414c7fc0811247de36fde5b079f4072a5461efc94699b37a2de891728ba4d86524f163fe25b53966b9286ed6ff86a7b8cce8d7c7c29a8b79a0e880db2a4e70647f8f9697313562e12bb4fd592a772144034bc45974edcc0af78d0156ce898567b8f56104f27494ff4de4b8dfb9b8297160bac35e1760234a53e8becb7"
+	// SHA256:	withPadding = "1cfef11f14bdc4b43d596aa537f68db1ec98f3723ae8b2f62c6f3c8d9bec82152013c59c56a44eca7da0b1ff34741f73efce1a002e35328ecdea6bb463a3677f9df532c0f7b22d7bfbaf79b4cb344f94d18672efc4add0b32feafbed4113b4e3466cd7f09c4285f81a508fd4f3edd23286fc6f37988a2d62445647f8fd0ca4"
+	withPadding = "3dd210475802d1450899421303694e77c9d91b4feddb5593"
+	toDecipher  = "077ed4d2affb36c82991b94b24433840a44f6e2ca1673ed583"
+)
+
+// See the 2 modifications made in rsa.go and the file utils.go to get a better understanding.
+
 func main() {
 	/*
-		setup()
+		// If you want to use another key or another ciphertext, cf:
+			setup()
 	*/
 	// Now we can try the attack :
 
@@ -51,7 +75,7 @@ func main() {
 		log.Fatalln("The plaintext is bigger than B, it is not OAEP compliant")
 	}
 
-	// We can now begin the attack, following James Manger "A Chosen Ciphertext Attack on RSA Optimal Asymmetric Encryption Padding (OAEP) au Standardized in PKCS #1 v2.0" article and notation
+	// We can now begin the attack, following James Manger "A Chosen Ciphertext Attack on RSA Optimal Asymmetric Encryption Padding (OAEP) au Standardized in PKCS #1 v2.0" article and notation. The steps are direct references to this article
 	// Step 1
 	// 1.1
 	f1 := new(big.Int).SetInt64(int64(2))

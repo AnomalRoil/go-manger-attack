@@ -14,6 +14,7 @@ import (
 	"os"
 )
 
+// Let us declare a 8 byte long checksum function by truncating a sha256
 type sha25664 struct {
 	h hash.Hash
 }
@@ -44,6 +45,7 @@ func New25664() hash.Hash {
 	return s
 }
 
+// Some useful function to play around with big.Int and strings:
 func fromBase10(base10 string) *big.Int {
 	i, ok := new(big.Int).SetString(base10, 10)
 	if !ok {
@@ -60,7 +62,7 @@ func fromBase16(base16 string) *big.Int {
 	return i
 }
 
-/*
+/* // The older private key used in the commented ciphertext
 var test2048Key = &PrivateKey{
 	PublicKey: PublicKey{
 		N: fromBase16("bbf82f090682ce9c2338ac2b9da871f7368d07eed41043a440d6b6f07454f51fb8dfbaaf035c02ab61ea48ceeb6fcd4876ed520d60e1ec4619719d8a5b8b807fafb8e0a3dfc737723ee6b4b7d93a2584ee6a649d060953748834b2454598394ee0aab12d7b61a51f527a9a41f6c1687fe2537298ca2a8f5946f8e5fd091dbdcb"),
@@ -73,18 +75,6 @@ var test2048Key = &PrivateKey{
 	},
 }
 */
-
-var test2048Key = &PrivateKey{
-	PublicKey: PublicKey{
-		N: fromBase10("74996017239120567164915083818865018336703341786730860076899"),
-		E: 65537,
-	},
-	D: fromBase10("5923056978953691130897057751249065056477792980755807347713"),
-	Primes: []*big.Int{
-		fromBase10("269171492412515202869949927361"),
-		fromBase10("278617979069590382200680986659"),
-	},
-}
 
 // This function allows one to generate a key, outputting it and to encrypt with this key and outputting it
 func encryptTest() {
@@ -127,13 +117,6 @@ func setup() {
 	}
 	fmt.Println("What we encrypted :", string(decipheredBytes))
 }
-
-const (
-	//SHA256:	toDecipher  = "1a3cbcc414c7fc0811247de36fde5b079f4072a5461efc94699b37a2de891728ba4d86524f163fe25b53966b9286ed6ff86a7b8cce8d7c7c29a8b79a0e880db2a4e70647f8f9697313562e12bb4fd592a772144034bc45974edcc0af78d0156ce898567b8f56104f27494ff4de4b8dfb9b8297160bac35e1760234a53e8becb7"
-	// SHA256:	withPadding = "1cfef11f14bdc4b43d596aa537f68db1ec98f3723ae8b2f62c6f3c8d9bec82152013c59c56a44eca7da0b1ff34741f73efce1a002e35328ecdea6bb463a3677f9df532c0f7b22d7bfbaf79b4cb344f94d18672efc4add0b32feafbed4113b4e3466cd7f09c4285f81a508fd4f3edd23286fc6f37988a2d62445647f8fd0ca4"
-	withPadding = "3dd210475802d1450899421303694e77c9d91b4feddb5593"
-	toDecipher  = "077ed4d2affb36c82991b94b24433840a44f6e2ca1673ed583"
-)
 
 func DivCeil(a, b *big.Int) *big.Int {
 	zero := new(big.Int).SetInt64(0)
