@@ -254,7 +254,10 @@ func EncryptOAEP(hash hash.Hash, random io.Reader, pub *PublicKey, msg []byte, l
 
 	m := new(big.Int)
 	m.SetBytes(em)
-	fmt.Printf("encrypt:%x\n", m)
+	// CHEAT. To have easy verification steps later
+	// Let us output the unencrypted padded message as a big.Int:
+	fmt.Printf("paddedPlaintext as a bigInt in hex:%x\n", m)
+
 	c := encrypt(new(big.Int), pub, m)
 	out := c.Bytes()
 
