@@ -1,14 +1,12 @@
+// Please note that for ease of use, we are exposing the oracle in leftPad()
 // This is a modified copy of the code from the crypto/RSA package
 // all credits goes to The Go Authors, it follows a BSD-style licence
 // that can be found in the Go LICENSE file
 
-// Its purpose is to demonstrate that the current crypto/rsa library is
+// Its purpose is to demonstrate that the current crypto/rsa library is at least partially
 // vulnerable to Manger attacks, cf. J. Manger. A Chosen Ciphertext Attack on RSA Optimal
 // Asymmetric Encryption Padding (OAEP) as Standardized in PKCS #1
 // v2.0. In J. Kilian, editor, Advances in Cryptology.
-
-// Please note that for ease of use, we are exposing the oracle at first
-// and then later trying to use a timing oracle
 
 package main
 
@@ -513,10 +511,9 @@ func leftPad(input []byte, size int) (out []byte) {
 	}
 	out = make([]byte, size)
 
-	// Let us explicitly get the oracle value for now, this is cheating
+	// Let us explicitly get the oracle value for now, this is cheating, of course
 	numberOfZeros = len(out) - n
 
-	//	fmt.Println("zeros: ", numberOfZeros)
 	copy(out[len(out)-n:], input)
 	return
 }
