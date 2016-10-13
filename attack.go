@@ -91,6 +91,7 @@ func main() {
 		}
 	}
 	fmt.Println("Step 1 finished: f1=", f1)
+
 	f12 := new(big.Int).Div(f1, two) // so f1/2 € [B/2,B)
 	B12 := new(big.Int).Div(B, two)
 	fmt.Println("  Checking f1/2*m € [B/2,B):", B12.Cmp(new(big.Int).Mul(f12, m)) == -1 && B.Cmp(new(big.Int).Mul(f12, m)) == 1)
@@ -102,9 +103,8 @@ func main() {
 	f2 := new(big.Int).Mul(nBB, f12)
 
 	// 2.2
-	endStep2 := false
 	queries := new(big.Int).SetInt64(int64(1))
-	for !endStep2 {
+	for end := false; !end; {
 		tryOracle(f2, c, e, N)
 		// 2.3a
 		if numberOfZeros == 0 { // ie we are >= B
@@ -113,13 +113,12 @@ func main() {
 		} else { // 2.3b
 			// ie numberOfZeros > 0, so we are < B
 			// this implies that we have found a f2 such that f2*m € [N,N+B)
-			endStep2 = true
+			end = true
 		}
 	}
 	fmt.Println("Step 2 finished: f2=", f2, "\n found in ", queries, "steps.")
 
 	// Step 3
-	mFound := false
 	stepsFor3 := 0
 	// 3.1
 	mmin := divCeil(N, f2)
@@ -127,7 +126,7 @@ func main() {
 	diff := new(big.Int).Sub(mmax, mmin)
 	fmt.Println("diff: ", diff)
 	fmt.Println("Sanity check : (mmax-mmin)*f2 ~B", new(big.Int).Sub(B, new(big.Int).Mul(f2, diff)))
-	for !mFound {
+	for found := false; !found; {
 		stepsFor3++
 		// 3.2
 		BB := new(big.Int).Mul(two, B)
@@ -150,7 +149,7 @@ func main() {
 
 		diff = new(big.Int).Sub(mmax, mmin)
 		if diff.Cmp(zero) <= 0 {
-			mFound = true
+			found = true
 		}
 	}
 	fmt.Println("Step 3 finished: \nfound m=", mmin, "\nreal  m=", m)
@@ -174,7 +173,7 @@ func tryOracle(f, c, e, N *big.Int) {
 	cfe := new(big.Int).Mul(c, fe)
 	mcfe := new(big.Int).Mod(cfe, N)
 
-	// and we try to decrypt it
+	// and we try to decrypt it, since we modified leftPad, it will set the numberOfZeros variable
 	DecryptOAEP(sha256.New(), nil, test2048Key, mcfe.Bytes(), []byte(""))
 	if numberOfZeros == -1 { // If leftPad wasn't called, then it means that decrypt() itself failed
 		log.Fatalln("There was an unexpected error too early in decryption stage")

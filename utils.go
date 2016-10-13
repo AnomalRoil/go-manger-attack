@@ -22,8 +22,11 @@ func fromBase16(base16 string) *big.Int {
 	return i
 }
 
-// This function allows one to generate a key, outputting it and to encrypt with this key and outputting it
-func encryptTest() {
+// setKeyAndCipher allows one to generate a key, display it and to encrypt
+// with this key a given message and display it. TODO: eventually put
+// the key in a file instead and store the ciphertext in a file too, to allow
+// easier key and cipher management.
+func setKeyAndCipher() {
 
 	s := mrand.NewSource(2)
 	r := mrand.New(s)
@@ -50,10 +53,14 @@ func encryptTest() {
 	fmt.Printf("Ciphertext toDecipher: %x\n", ciphertext)
 }
 
-// allows one to setup the current test
+// setup allows one to setup the current test, ie it will generate a key and use it
+// to encrypt a message thanks to encryptTest() after displaying it and so, it will
+// also call decrypt to decrypt with the key set in the main file attack.go, so it
+// won't work unless both key are the same... Currently they are, since the PRNG
+// is seeded with 2 in the encryptTest() function.
 func setup() {
 	// We first set our things up :
-	encryptTest()
+	setKeyAndCipher()
 
 	bytesToDecipher, _ := hex.DecodeString(toDecipher)
 	decipheredBytes, err := DecryptOAEP(sha256.New(), nil, test2048Key, bytesToDecipher, []byte(""))
@@ -79,7 +86,8 @@ func divCeil(a, b *big.Int) *big.Int {
 	return ceiled
 }
 
-//unpad is simply the last part of the DecryptOAEP function, we feed it a foundPlaintext and it will unpad it as if it were padded in OAEP
+// unpad is simply the last part of the DecryptOAEP function, as it stands in the RSA package,
+// we feed it a foundPlaintext and it will unpad it as if it were padded in OAEP
 func unpad(k int, foundPlaintext *big.Int, hash hash.Hash, label []byte) []byte {
 	hash.Write(label)
 	lHash := hash.Sum(nil)
