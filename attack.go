@@ -76,6 +76,7 @@ func main() {
 
 	// We can now begin the attack, following James Manger "A Chosen Ciphertext Attack on RSA Optimal Asymmetric Encryption Padding (OAEP) au Standardized in PKCS #1 v2.0" article and notation. The steps are direct references to this article
 	// Step 1
+	fmt.Println("Begin step 1")
 	// 1.1
 	f1 := new(big.Int).SetInt64(int64(2))
 	// 1.2
@@ -94,9 +95,10 @@ func main() {
 
 	f12 := new(big.Int).Div(f1, two) // so f1/2 € [B/2,B)
 	B12 := new(big.Int).Div(B, two)
-	fmt.Println("  Checking f1/2*m € [B/2,B):", B12.Cmp(new(big.Int).Mul(f12, m)) == -1 && B.Cmp(new(big.Int).Mul(f12, m)) == 1)
+	fmt.Println("\tChecking f1/2*m € [B/2,B):", B12.Cmp(new(big.Int).Mul(f12, m)) == -1 && B.Cmp(new(big.Int).Mul(f12, m)) == 1)
 
 	// Step 2
+	fmt.Println("Starting step 2")
 	// 2.1
 	nB := new(big.Int).Add(N, B)
 	nBB := new(big.Int).Div(nB, B)
@@ -119,13 +121,13 @@ func main() {
 	fmt.Println("Step 2 finished: f2=", f2, "\n found in ", queries, "steps.")
 
 	// Step 3
+	fmt.Println("Starting step 3, this can take a bit longer than the previous ones")
 	stepsFor3 := 0
 	// 3.1
 	mmin := divCeil(N, f2)
 	mmax := new(big.Int).Div(nB, f2)
 	diff := new(big.Int).Sub(mmax, mmin)
-	fmt.Println("diff: ", diff)
-	fmt.Println("Sanity check : (mmax-mmin)*f2 ~B", new(big.Int).Sub(B, new(big.Int).Mul(f2, diff)))
+	fmt.Println("Sanity check : (mmax-mmin)*f2 ~B? If this is 'small': B-(mmax-mmin)*f2=", new(big.Int).Sub(B, new(big.Int).Mul(f2, diff)))
 	for found := false; !found; {
 		stepsFor3++
 		// 3.2
@@ -153,13 +155,13 @@ func main() {
 		}
 	}
 	fmt.Println("Step 3 finished: \nfound m=", mmin, "\nreal  m=", m)
-	fmt.Println(" found in ", stepsFor3, "steps")
+	fmt.Println("found in ", stepsFor3, "steps")
 
 	// We now have found m = mmin, we can unpad it:
 	recoveredPlaintext := unpad(k, mmin, sha256.New(), []byte(""))
 
 	fmt.Println("And we have recovered:\n", string(recoveredPlaintext))
-	fmt.Println("in ", countQueries, " queries, with a k=", k, "!")
+	fmt.Println("in ", countQueries, " queries, with a k=", k)
 }
 
 func tryOracle(f, c, e, N *big.Int) {
@@ -168,7 +170,7 @@ func tryOracle(f, c, e, N *big.Int) {
 	// we reset the number of zeros to its error value
 	numberOfZeros = -1
 
-	// we calculate c*f^e mod N
+	// we calculate c*f^e mod N, cf Step 1.2 in Manger's article
 	fe := new(big.Int).Exp(f, e, N)
 	cfe := new(big.Int).Mul(c, fe)
 	mcfe := new(big.Int).Mod(cfe, N)
