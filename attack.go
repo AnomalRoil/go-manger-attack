@@ -127,7 +127,7 @@ func main() {
 	mmin := divCeil(N, f2)
 	mmax := new(big.Int).Div(nB, f2)
 	diff := new(big.Int).Sub(mmax, mmin)
-	fmt.Println("Sanity check : (mmax-mmin)*f2 ~B? If this is 'small': B-(mmax-mmin)*f2=", new(big.Int).Sub(B, new(big.Int).Mul(f2, diff)))
+	fmt.Println("\tSanity check : (mmax-mmin)*f2 ~B? If this is 'small': B-(mmax-mmin)*f2=", new(big.Int).Sub(B, new(big.Int).Mul(f2, diff)))
 	for found := false; !found; {
 		stepsFor3++
 		// 3.2
@@ -154,14 +154,14 @@ func main() {
 			found = true
 		}
 	}
-	fmt.Println("Step 3 finished: \nfound m=", mmin, "\nreal  m=", m)
-	fmt.Println("found in ", stepsFor3, "steps")
+	fmt.Println("Step 3 finished: \n\tfound m=", mmin, "\n\treal  m=", m)
+	fmt.Println("\tfound in ", stepsFor3, "steps")
 
 	// We now have found m = mmin, we can unpad it:
 	recoveredPlaintext := unpad(k, mmin, sha256.New(), []byte(""))
 
 	fmt.Println("And we have recovered:\n", string(recoveredPlaintext))
-	fmt.Println("in ", countQueries, " queries, with a k=", k)
+	fmt.Println("\tin ", countQueries, " queries, with a k=", k)
 }
 
 func tryOracle(f, c, e, N *big.Int) {

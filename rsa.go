@@ -28,7 +28,6 @@ var bigOne = big.NewInt(1)
 type PublicKey struct {
 	N *big.Int // modulus
 	E int      // public exponent
-
 }
 
 // OAEPOptions is an interface for passing options to OAEP decryption using the
@@ -55,18 +54,14 @@ var (
 func checkPub(pub *PublicKey) error {
 	if pub.N == nil {
 		return errPublicModulus
-
 	}
 	if pub.E < 2 {
 		return errPublicExponentSmall
-
 	}
 	if pub.E > 1<<31-1 {
 		return errPublicExponentLarge
-
 	}
 	return nil
-
 }
 
 // A PrivateKey represents an RSA key
@@ -83,7 +78,6 @@ type PrivateKey struct {
 // Public returns the public key corresponding to priv.
 func (priv *PrivateKey) Public() crypto.PublicKey {
 	return &priv.PublicKey
-
 }
 
 type PrecomputedValues struct {
@@ -102,7 +96,6 @@ type CRTValue struct {
 	Exp   *big.Int // D mod (prime-1).
 	Coeff *big.Int // R·Coeff ≡ 1 mod Prime.
 	R     *big.Int // product of primes prior to this (inc p and q).
-
 }
 
 // Validate performs basic sanity checks on the key.
@@ -110,7 +103,6 @@ type CRTValue struct {
 func (priv *PrivateKey) Validate() error {
 	if err := checkPub(&priv.PublicKey); err != nil {
 		return err
-
 	}
 
 	// Check that Πprimes == n.
@@ -119,14 +111,11 @@ func (priv *PrivateKey) Validate() error {
 		// Any primes ≤ 1 will cause divide-by-zero panics later.
 		if prime.Cmp(bigOne) <= 0 {
 			return errors.New("crypto/rsa: invalid prime value")
-
 		}
 		modulus.Mul(modulus, prime)
-
 	}
 	if modulus.Cmp(priv.N) != 0 {
 		return errors.New("crypto/rsa: invalid modulus")
-
 	}
 
 	// Check that de ≡ 1 mod p-1, for each prime.
@@ -142,30 +131,23 @@ func (priv *PrivateKey) Validate() error {
 		congruence.Mod(de, pminus1)
 		if congruence.Cmp(bigOne) != 0 {
 			return errors.New("crypto/rsa: invalid exponents")
-
 		}
-
 	}
 	return nil
-
 }
 
 // incCounter increments a four byte, big-endian counter.
 func incCounter(c *[4]byte) {
 	if c[3]++; c[3] != 0 {
 		return
-
 	}
 	if c[2]++; c[2] != 0 {
 		return
-
 	}
 	if c[1]++; c[1] != 0 {
 		return
-
 	}
 	c[0]++
-
 }
 
 // mgf1XOR XORs the bytes in out with a mask generated using the MGF1 function
@@ -184,12 +166,9 @@ func mgf1XOR(out []byte, hash hash.Hash, seed []byte) {
 		for i := 0; i < len(digest) && done < len(out); i++ {
 			out[done] ^= digest[i]
 			done++
-
 		}
 		incCounter(&counter)
-
 	}
-
 }
 
 // ErrMessageTooLong is returned when attempting to encrypt a message which is
@@ -200,7 +179,6 @@ func encrypt(c *big.Int, pub *PublicKey, m *big.Int) *big.Int {
 	e := big.NewInt(int64(pub.E))
 	c.Exp(m, e, pub.N)
 	return c
-
 }
 
 // EncryptOAEP encrypts the given message with RSA-OAEP.
@@ -358,19 +336,15 @@ func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err er
 			r, err = rand.Int(random, priv.N)
 			if err != nil {
 				return
-
 			}
 			if r.Cmp(bigZero) == 0 {
 				r = bigOne
-
 			}
 			var ok bool
 			ir, ok = modInverse(r, priv.N)
 			if ok {
 				break
-
 			}
-
 		}
 		bigE := big.NewInt(int64(priv.E))
 		rpowe := new(big.Int).Exp(r, bigE, priv.N) // N != 0
@@ -378,12 +352,10 @@ func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err er
 		cCopy.Mul(cCopy, rpowe)
 		cCopy.Mod(cCopy, priv.N)
 		c = cCopy
-
 	}
 
 	if priv.Precomputed.Dp == nil {
 		m = new(big.Int).Exp(c, priv.D, priv.N)
-
 	} else {
 		// We have the precalculated values needed for the CRT.
 		m = new(big.Int).Exp(c, priv.Precomputed.Dp, priv.Primes[0])
@@ -391,7 +363,6 @@ func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err er
 		m.Sub(m, m2)
 		if m.Sign() < 0 {
 			m.Add(m, priv.Primes[0])
-
 		}
 		m.Mul(m, priv.Precomputed.Qinv)
 		m.Mod(m, priv.Primes[0])
@@ -440,7 +411,6 @@ func DecryptOAEP(hash hash.Hash, random io.Reader, priv *PrivateKey, ciphertext 
 	k := (priv.N.BitLen() + 7) / 8
 	if len(ciphertext) > k ||
 		k < hash.Size()*2+2 {
-		fmt.Println("toolong")
 		return nil, ErrDecryption
 	}
 
@@ -511,7 +481,10 @@ func leftPad(input []byte, size int) (out []byte) {
 	}
 	out = make([]byte, size)
 
+	// ---------------------------------------------------------------------------
 	// Let us explicitly get the oracle value for now, this is cheating, of course
+	// in practice an attacker would need to be able to use timings or another mean
+	// to obtain that information.
 	numberOfZeros = len(out) - n
 
 	copy(out[len(out)-n:], input)
