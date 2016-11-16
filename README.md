@@ -4,3 +4,7 @@ This is a toy implementation in Go of the well known chosen ciphertext attack ag
 
 James Manger showed that, despite being formally secure, normal implementations of PKCS #1 v2.0 RSA OAEP decoding were vulnerable to an adaptive chosen ciphertext attack, whose principle is relatively simple.
 The present repo is an implementation of that attack in go, using a modified, vulnerable RSA OEAP decryption function instead of the one from the crypto/rsa package.
+
+## Intellectual property
+
+Copyright (c) 2016 Nagravision SA, all rights are reserved to the greatest possible extent.
