@@ -1,3 +1,6 @@
+// This contains modified copies of some of the code from the Go crypto package
+// all credits goes to The Go Authors, it follows a BSD-style licence that can
+// be found in the GO_LICENSE file
 package main
 
 import (
@@ -14,6 +17,7 @@ import (
 	"os"
 )
 
+// fromBase16 returns a new Big.Int from an hexadecimal string, as found in the go crypto tests suite
 func fromBase16(base16 string) *big.Int {
 	i, ok := new(big.Int).SetString(base16, 16)
 	if !ok {
@@ -86,8 +90,9 @@ func divCeil(a, b *big.Int) *big.Int {
 	return ceiled
 }
 
-// unpad is simply the last part of the DecryptOAEP function, as it stands in the RSA package,
-// we feed it a foundPlaintext and it will unpad it as if it were padded in OAEP
+// unpad is simply the last part of the DecryptOAEP function, as it stands in
+// the Go crypto/rsa package, we feed it with a foundPlaintext and it will
+// unpad it as if it were padded in OAEP (even if it is not, useful for tests)
 func unpad(k int, foundPlaintext *big.Int, hash hash.Hash, label []byte) []byte {
 	hash.Write(label)
 	lHash := hash.Sum(nil)

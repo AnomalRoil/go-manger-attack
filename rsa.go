@@ -1,7 +1,7 @@
 // Please note that for ease of use, we are exposing the oracle in leftPad()
 // This is a modified copy of the code from the crypto/RSA package
 // all credits goes to The Go Authors, it follows a BSD-style licence
-// that can be found in the Go LICENSE file
+// that can be found in the GO_LICENSE file
 
 // Its purpose is to demonstrate that the current crypto/rsa library is at least partially
 // vulnerable to Manger attacks, cf. J. Manger. A Chosen Ciphertext Attack on RSA Optimal
