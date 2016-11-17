@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the GO_LICENSE file.
 
+// -----------------< AnomalRoil 2016
 // Please note that for ease of use, we are exposing the oracle in leftPad()
 // This is a modified copy of the code from the crypto/RSA package
 // all credits goes to The Go Authors, it follows a BSD-style licence
@@ -11,7 +12,7 @@
 // vulnerable to Manger attacks, cf. J. Manger. A Chosen Ciphertext Attack on RSA Optimal
 // Asymmetric Encryption Padding (OAEP) as Standardized in PKCS #1
 // v2.0. In J. Kilian, editor, Advances in Cryptology.
-
+// ------------------ AnomalRoil 2016 >
 package main
 
 import (
@@ -234,9 +235,12 @@ func EncryptOAEP(hash hash.Hash, random io.Reader, pub *PublicKey, msg []byte, l
 
 	m := new(big.Int)
 	m.SetBytes(em)
+
+	// -----------------< AnomalRoil 2016
 	// CHEAT. To have easy verification steps later
 	// Let us output the unencrypted padded message as a big.Int:
 	fmt.Printf("paddedPlaintext as a bigInt in hex:%x\n", m)
+	// ------------------ AnomalRoil 2016 >
 
 	c := encrypt(new(big.Int), pub, m)
 	out := c.Bytes()
@@ -319,7 +323,6 @@ func (priv *PrivateKey) Precompute() {
 func decrypt(random io.Reader, priv *PrivateKey, c *big.Int) (m *big.Int, err error) {
 	// TODO(agl): can we get away with reusing blinds?
 	if c.Cmp(priv.N) > 0 {
-		fmt.Println("toolong")
 		err = ErrDecryption
 		return
 	}
@@ -485,11 +488,12 @@ func leftPad(input []byte, size int) (out []byte) {
 	}
 	out = make([]byte, size)
 
-	// ---------------------------------------------------------------------------
+	// -----------------< AnomalRoil 2016
 	// Let us explicitly get the oracle value for now, this is cheating, of course
 	// in practice an attacker would need to be able to use timings or another mean
 	// to obtain that information.
 	numberOfZeros = len(out) - n
+	// ------------------ AnomalRoil 2016 >
 
 	copy(out[len(out)-n:], input)
 	return
