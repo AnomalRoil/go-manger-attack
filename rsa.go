@@ -1,3 +1,7 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the GO_LICENSE file.
+
 // Please note that for ease of use, we are exposing the oracle in leftPad()
 // This is a modified copy of the code from the crypto/RSA package
 // all credits goes to The Go Authors, it follows a BSD-style licence
