@@ -9,4 +9,5 @@ The present repo is an implementation of that attack in Go, against a *modified*
 ## Intellectual property
 
 Copyright (c) 2016 Nagravision SA, all rights are reserved.
+
 [rsa.go](rsa.go) and parts of [utils.go](utils.go) are copyright The Go Authors, with modifications copyright Nagravision SA.
