@@ -32,8 +32,31 @@ var test2048Key = &PrivateKey{
 // The ciphertext we want to decipher, withPadding is the padded message, unencrypted
 const (
 	withPadding = "70047fc306336e67941dc080cc257dfa88c56d4fcc3b2162506e71e52953a61c8bc6b2ba9fbdd2d63e7857806574e4be5b832039737dfd858468c4b7ad82f1c8653aa063cc416e94aa5dda2297c3b80ea7c7b3ee6ecf7daf7acfb899ec1096c1038c5cc344098402bb195d9b914a105458e04ea05a8fa331f5278b09db2c4761ae189e568117d63e39ad36d2425fe9667fda740f265f5409ecbecf13846197af1bcfea18e9e33eebbf1717835b3589c61379a9826baef0184c13766c6004754b4a8f26a11123e1ef7ed004c38b239b69aef564719490a2a2395488965726336ad30d79d9fe6e268dc00925027fb083f7094e80731c3be5df0d8e131c458edd"
-	toDecipher  = "7c691962f62e3e2a49a4b7ba8c3fa00f299a233b50cc52faa77c2fbeda868aa443eb10f858a00e8a3bd9a570e4e638fd389eeef12db680ddb824ba6ae6c635f072bea25198305f494dc909713146a0ab9ea8d2e388f1dcea299e66d99741a988bcfb0e4973bf4e791542813120112b5dd06949a1989a9e2a3e596f36541117dd9384837df6c85ec1113378c6309495822e7bca72ab40710707e4fbd8dda38d986a673647f579791a6966e1e533c3713e487a23b8136c6fdcbf38ddd3e976ab3783cc44533ee231f08f604c66312474005fb2f8dbf2c00068aa16dacfb9c41f2beda5bd277e9922bcb92f9ab3f8a83eebce60c03cbb537f722f8fa96f11c272e3"
+	toDecrypt   = "7c691962f62e3e2a49a4b7ba8c3fa00f299a233b50cc52faa77c2fbeda868aa443eb10f858a00e8a3bd9a570e4e638fd389eeef12db680ddb824ba6ae6c635f072bea25198305f494dc909713146a0ab9ea8d2e388f1dcea299e66d99741a988bcfb0e4973bf4e791542813120112b5dd06949a1989a9e2a3e596f36541117dd9384837df6c85ec1113378c6309495822e7bca72ab40710707e4fbd8dda38d986a673647f579791a6966e1e533c3713e487a23b8136c6fdcbf38ddd3e976ab3783cc44533ee231f08f604c66312474005fb2f8dbf2c00068aa16dacfb9c41f2beda5bd277e9922bcb92f9ab3f8a83eebce60c03cbb537f722f8fa96f11c272e3"
 )
+
+// tryOracle is a function which "ask the oracle", this is the hardest part and
+//  where I cheat: I'm getting the number of leading zeros from a modified version
+//  of DecryptOAEP through the global variable numberOfZeros instead of being able
+//  to get it through some timing leaks.
+func tryOracle(f, c, e, N *big.Int) {
+	// We increment our counter
+	countQueries++
+	// We reset the number of zeros to its error value
+	numberOfZeros = -1
+
+	// We calculate c*f^e mod N, cf Step 1.2 in Manger's article
+	fe := new(big.Int).Exp(f, e, N)
+	cfe := new(big.Int).Mul(c, fe)
+	mcfe := new(big.Int).Mod(cfe, N)
+
+	// And we try to decrypt it, since we modified leftPad, it will set the numberOfZeros variable
+	DecryptOAEP(sha256.New(), nil, test2048Key, mcfe.Bytes(), []byte(""))
+	if numberOfZeros == -1 { // If leftPad wasn't called, then it means that decrypt() itself failed
+		log.Fatalln("There was an unexpected error too early in decryption stage")
+	}
+	// That's it, now if numberOfZeros == 0, then we know mcfe >= B otherwise mcfe < B
+}
 
 // See the 2 modifications made in rsa.go and the file utils.go to get a better understanding.
 func main() {
@@ -47,7 +70,7 @@ func main() {
 	clearPadded, _ := hex.DecodeString(withPadding)
 
 	// This is the ciphertext we want to decipher
-	bytesToDecipher, _ := hex.DecodeString(toDecipher)
+	bytesToDecipher, _ := hex.DecodeString(toDecrypt)
 	c := new(big.Int).SetBytes(bytesToDecipher)
 	// The public key gives us N and e :
 	N := test2048Key.N
@@ -58,7 +81,7 @@ func main() {
 	one := new(big.Int).SetInt64(int64(1))
 	two := new(big.Int).SetInt64(int64(2))
 
-	// We know that clearPadded € [0,B)
+	// We know that clearPadded	∈ [0,B[
 	k := (N.BitLen() + 7) / 8
 	B := new(big.Int).Exp(two, big.NewInt(int64((k-1)*8)), nil)
 	m := new(big.Int).SetBytes(clearPadded)
@@ -67,35 +90,38 @@ func main() {
 	// Assert and sanity checks:
 	// we assume that 2B < n
 	if new(big.Int).Mul(two, B).Cmp(N) >= 0 {
-		log.Fatalln("unsupported case: 2B >= N")
+		log.Fatalln("Unsupported case: 2B >= N")
 	}
 
 	if m.Cmp(B) != -1 {
 		log.Fatalln("The plaintext is bigger than B, it is not OAEP compliant")
 	}
 
-	// We can now begin the attack, following James Manger "A Chosen Ciphertext Attack on RSA Optimal Asymmetric Encryption Padding (OAEP) au Standardized in PKCS #1 v2.0" article and notation. The steps are direct references to this article
+	// We can now begin the attack, following James Manger "A Chosen Ciphertext Attack
+	//  on RSA Optimal Asymmetric Encryption Padding (OAEP) as Standardized in PKCS #1 v2.0"
+	//  article and notation. The steps are direct references to this article, which can be
+	//	found at: http://archiv.infsec.ethz.ch/education/fs08/secsem/Manger01.pdf
 	// Step 1
 	fmt.Println("Begin step 1")
 	// 1.1
 	f1 := new(big.Int).SetInt64(int64(2))
 	// 1.2
 	for end := false; !end; {
-		tryOracle(f1, c, e, N) // we are sure this ends with either numberOfZero == 0 or > 0
+		tryOracle(f1, c, e, N) // We are sure this ends with either numberOfZeros == 0 or > 0
 		// 1.3a
 		if numberOfZeros > 0 { // Then we are still < B
 			f1 = new(big.Int).Mul(two, f1)
 		} else { // 1.3b
 			// Then numberOfZeros == 0, so we are >= B
-			// this implies that f1*m € [B,2B)
+			// this implies that f1*m ∈ [B,2B[
 			end = true
 		}
 	}
 	fmt.Println("Step 1 finished: f1=", f1)
 
-	f12 := new(big.Int).Div(f1, two) // so f1/2 € [B/2,B)
+	f12 := new(big.Int).Div(f1, two) // So f1/2 ∈ [B/2,B[
 	B12 := new(big.Int).Div(B, two)
-	fmt.Println("\tChecking f1/2*m € [B/2,B):", B12.Cmp(new(big.Int).Mul(f12, m)) == -1 && B.Cmp(new(big.Int).Mul(f12, m)) == 1)
+	fmt.Println("\tChecking f1/2*m ∈ [B/2,B[:", B12.Cmp(new(big.Int).Mul(f12, m)) == -1 && B.Cmp(new(big.Int).Mul(f12, m)) == 1)
 
 	// Step 2
 	fmt.Println("Starting step 2")
@@ -109,12 +135,12 @@ func main() {
 	for end := false; !end; {
 		tryOracle(f2, c, e, N)
 		// 2.3a
-		if numberOfZeros == 0 { // ie we are >= B
+		if numberOfZeros == 0 { // i.e. we are >= B
 			f2 = new(big.Int).Add(f2, f12)
 			queries.Add(queries, one)
 		} else { // 2.3b
-			// ie numberOfZeros > 0, so we are < B
-			// this implies that we have found a f2 such that f2*m € [N,N+B)
+			// i.e. numberOfZeros > 0, so we are < B
+			// this implies that we have found a f2 such that f2*m ∈ [N,N+B[
 			end = true
 		}
 	}
@@ -127,7 +153,9 @@ func main() {
 	mmin := divCeil(N, f2)
 	mmax := new(big.Int).Div(nB, f2)
 	diff := new(big.Int).Sub(mmax, mmin)
-	fmt.Println("\tSanity check : (mmax-mmin)*f2 ~B? If this is 'small': B-(mmax-mmin)*f2=", new(big.Int).Sub(B, new(big.Int).Mul(f2, diff)))
+	fmt.Println("\tSanity check : (mmax-mmin)*f2 ~B? Okay if this is 'small': B-(mmax-mmin)*f2=",
+		new(big.Int).Sub(B, new(big.Int).Mul(f2, diff)))
+
 	for found := false; !found; {
 		stepsFor3++
 		// 3.2
@@ -145,7 +173,6 @@ func main() {
 		if numberOfZeros == 0 {
 			mmin = divCeil(iNB, f3)
 		} else { // 3.5b
-			// here we can just floor, as Div already does
 			mmax = new(big.Int).Div(iNB, f3)
 		}
 
@@ -162,23 +189,4 @@ func main() {
 
 	fmt.Println("And we have recovered:\n", string(recoveredPlaintext))
 	fmt.Println("\tin ", countQueries, " queries, with a k=", k)
-}
-
-func tryOracle(f, c, e, N *big.Int) {
-	// we increment our counter
-	countQueries++
-	// we reset the number of zeros to its error value
-	numberOfZeros = -1
-
-	// we calculate c*f^e mod N, cf Step 1.2 in Manger's article
-	fe := new(big.Int).Exp(f, e, N)
-	cfe := new(big.Int).Mul(c, fe)
-	mcfe := new(big.Int).Mod(cfe, N)
-
-	// and we try to decrypt it, since we modified leftPad, it will set the numberOfZeros variable
-	DecryptOAEP(sha256.New(), nil, test2048Key, mcfe.Bytes(), []byte(""))
-	if numberOfZeros == -1 { // If leftPad wasn't called, then it means that decrypt() itself failed
-		log.Fatalln("There was an unexpected error too early in decryption stage")
-	}
-	// that's it, now if numberOfZeros == 0, then we know mcfe >= B otherwise mcfe < B
 }

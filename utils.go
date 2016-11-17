@@ -66,7 +66,7 @@ func setup() {
 	// We first set our things up :
 	setKeyAndCipher()
 
-	bytesToDecipher, _ := hex.DecodeString(toDecipher)
+	bytesToDecipher, _ := hex.DecodeString(toDecrypt)
 	decipheredBytes, err := DecryptOAEP(sha256.New(), nil, test2048Key, bytesToDecipher, []byte(""))
 	if err != nil {
 		log.Fatal(err)
