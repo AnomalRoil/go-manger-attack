@@ -5,13 +5,13 @@
 // -----------------< AnomalRoil 2016
 // Please note that for ease of use, we are exposing the oracle in leftPad()
 // This is a modified copy of the code from the crypto/RSA package
-// all credits goes to The Go Authors, it follows a BSD-style licence
+// all credit goes to The Go Authors, it follows a BSD-style licence
 // that can be found in the GO_LICENSE file
 
 // Its purpose is to demonstrate that the current crypto/rsa library is at least partially
 // vulnerable to Manger attacks, cf. J. Manger. A Chosen Ciphertext Attack on RSA Optimal
-// Asymmetric Encryption Padding (OAEP) as Standardized in PKCS #1
-// v2.0. In J. Kilian, editor, Advances in Cryptology.
+// Asymmetric Encryption Padding (OAEP) as Standardized in PKCS #1 v2.0. In J. Kilian,
+// editor, Advances in Cryptology - CRYPTO 2001. (http://iacr.org/archive/crypto2001/21390229.pdf)
 // ------------------ AnomalRoil 2016 >
 package main
 
