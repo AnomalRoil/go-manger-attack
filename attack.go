@@ -39,7 +39,7 @@ const (
 //  where I cheat: I'm getting the number of leading zeros from a modified version
 //  of DecryptOAEP through the global variable numberOfZeros instead of being able
 //  to get it through some timing leaks.
-func tryOracle(f, c, e, N *big.Int) {
+func tryOracle(f, c, e, N *big.Int) bool {
 	// We increment our counter
 	countQueries++
 	// We reset the number of zeros to its error value
@@ -52,10 +52,15 @@ func tryOracle(f, c, e, N *big.Int) {
 
 	// And we try to decrypt it, since we modified leftPad, it will set the numberOfZeros variable
 	DecryptOAEP(sha256.New(), nil, test2048Key, mcfe.Bytes(), []byte(""))
-	if numberOfZeros == -1 { // If leftPad wasn't called, then it means that decrypt() itself failed
+	// That's it, now if numberOfZeros == 0, then we know mcfe >= B
+	if numberOfZeros == 0 {
+		return true
+	} else if numberOfZeros > 0 { // otherwise mcfe < B, ie it had a zero MSB
+		return false
+	} else { // If leftPad wasn't called, then it means that decrypt() itself failed
 		log.Fatalln("There was an unexpected error too early in decryption stage")
 	}
-	// That's it, now if numberOfZeros == 0, then we know mcfe >= B otherwise mcfe < B
+	return false
 }
 
 // See the 2 modifications made in rsa.go and the file utils.go to get a better understanding.
@@ -85,7 +90,6 @@ func main() {
 	k := (N.BitLen() + 7) / 8
 	B := new(big.Int).Exp(two, big.NewInt(int64((k-1)*8)), nil)
 	m := new(big.Int).SetBytes(clearPadded)
-	fmt.Println("\nWhat we want to recover:", leftPad(m.Bytes(), k))
 
 	// Assert and sanity checks:
 	// we assume that 2B < n
@@ -102,21 +106,17 @@ func main() {
 	//  article and notation. The steps are direct references to this article, which can be
 	//	found at: http://archiv.infsec.ethz.ch/education/fs08/secsem/Manger01.pdf
 	// Step 1
-	fmt.Println("Begin step 1")
+	fmt.Println("Starting step 1")
 	// 1.1
 	f1 := new(big.Int).SetInt64(int64(2))
 	// 1.2
-	for end := false; !end; {
-		tryOracle(f1, c, e, N) // We are sure this ends with either numberOfZeros == 0 or > 0
+	for !tryOracle(f1, c, e, N) { // We are sure it returns either numberOfZeros == 0 or > 0
 		// 1.3a
-		if numberOfZeros > 0 { // Then we are still < B
-			f1 = new(big.Int).Mul(two, f1)
-		} else { // 1.3b
-			// Then numberOfZeros == 0, so we are >= B
-			// this implies that f1*m ∈ [B,2B[
-			end = true
-		}
-	}
+		// Then we are still < B, it returned false
+		f1 = new(big.Int).Mul(two, f1)
+	} // 1.3b
+	// Then numberOfZeros == 0, tryOracle returned true, so we are >= B
+	// this implies that f1*m ∈ [B,2B[
 	fmt.Println("Step 1 finished: f1=", f1)
 
 	f12 := new(big.Int).Div(f1, two) // So f1/2 ∈ [B/2,B[
@@ -132,19 +132,14 @@ func main() {
 
 	// 2.2
 	queries := new(big.Int).SetInt64(int64(1))
-	for end := false; !end; {
-		tryOracle(f2, c, e, N)
-		// 2.3a
-		if numberOfZeros == 0 { // i.e. we are >= B
-			f2 = new(big.Int).Add(f2, f12)
-			queries.Add(queries, one)
-		} else { // 2.3b
-			// i.e. numberOfZeros > 0, so we are < B
-			// this implies that we have found a f2 such that f2*m ∈ [N,N+B[
-			end = true
-		}
-	}
-	fmt.Println("Step 2 finished: f2=", f2, "\n found in ", queries, "steps.")
+	for tryOracle(f2, c, e, N) { // 2.3a
+		// i.e. we are >= B, tryOracle returned true
+		f2 = new(big.Int).Add(f2, f12)
+		queries.Add(queries, one)
+	} // 2.3b
+	// i.e. numberOfZeros > 0, tryOracle returned false so we are < B
+	// this implies that we have found a f2 such that f2*m ∈ [N,N+B[
+	fmt.Println("Step 2 finished: f2=", f2, "\n\tfound in ", queries, "steps.")
 
 	// Step 3
 	fmt.Println("Starting step 3, this can take a bit longer than the previous ones")
@@ -167,26 +162,25 @@ func main() {
 		// 3.4
 		iN := new(big.Int).Mul(i, N)
 		f3 := divCeil(iN, mmin)
-		tryOracle(f3, c, e, N)
 		// 3.5a
 		iNB := new(big.Int).Add(iN, B)
-		if numberOfZeros == 0 {
+		if tryOracle(f3, c, e, N) { // then it wasn't padded, >=B
 			mmin = divCeil(iNB, f3)
-		} else { // 3.5b
+		} else { // 3.5b <B
 			mmax = new(big.Int).Div(iNB, f3)
 		}
 
 		diff = new(big.Int).Sub(mmax, mmin)
-		if diff.Cmp(zero) <= 0 {
+		if diff.Cmp(zero) <= 0 { // the range has been narrowed down to one m'
 			found = true
 		}
 	}
-	fmt.Println("Step 3 finished: \n\tfound m=", mmin, "\n\treal  m=", m)
+	fmt.Println("Step 3 finished: \n\tfound m=", mmin)
 	fmt.Println("\tfound in ", stepsFor3, "steps")
 
 	// We now have found m = mmin, we can unpad it:
 	recoveredPlaintext := unpad(k, mmin, sha256.New(), []byte(""))
 
-	fmt.Println("And we have recovered:\n", string(recoveredPlaintext))
-	fmt.Println("\tin ", countQueries, " queries, with a k=", k)
+	fmt.Printf("And we have recovered:\n\t\t\"%s\"\n", string(recoveredPlaintext))
+	fmt.Println("\tin ", countQueries, " queries, with k=", k)
 }
