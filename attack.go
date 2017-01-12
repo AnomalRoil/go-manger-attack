@@ -83,7 +83,6 @@ func main() {
 
 	// A few useful big.Int :
 	zero := new(big.Int).SetInt64(int64(0))
-	one := new(big.Int).SetInt64(int64(1))
 	two := new(big.Int).SetInt64(int64(2))
 
 	// We know that clearPadded	∈ [0,B[
@@ -107,17 +106,19 @@ func main() {
 	//	found at: http://archiv.infsec.ethz.ch/education/fs08/secsem/Manger01.pdf
 	// Step 1
 	fmt.Println("Starting step 1")
+	stepsFor1 := 0
 	// 1.1
 	f1 := new(big.Int).SetInt64(int64(2))
 	// 1.2
 	for !tryOracle(f1, c, e, N) { // We are sure it returns either numberOfZeros == 0 or > 0
+		stepsFor1++
 		// 1.3a
 		// Then we are still < B, it returned false
-		f1 = new(big.Int).Mul(two, f1)
+		f1.Mul(two, f1)
 	} // 1.3b
 	// Then numberOfZeros == 0, tryOracle returned true, so we are >= B
 	// this implies that f1*m ∈ [B,2B[
-	fmt.Println("Step 1 finished: f1=", f1)
+	fmt.Println("Step 1 finished: f1=", f1, "found in", stepsFor1, "queries")
 
 	f12 := new(big.Int).Div(f1, two) // So f1/2 ∈ [B/2,B[
 	B12 := new(big.Int).Div(B, two)
@@ -125,21 +126,21 @@ func main() {
 
 	// Step 2
 	fmt.Println("Starting step 2")
+	stepsFor2 := 0
 	// 2.1
 	nB := new(big.Int).Add(N, B)
 	nBB := new(big.Int).Div(nB, B)
 	f2 := new(big.Int).Mul(nBB, f12)
 
 	// 2.2
-	queries := new(big.Int).SetInt64(int64(1))
 	for tryOracle(f2, c, e, N) { // 2.3a
+		stepsFor2++
 		// i.e. we are >= B, tryOracle returned true
-		f2 = new(big.Int).Add(f2, f12)
-		queries.Add(queries, one)
+		f2.Add(f2, f12)
 	} // 2.3b
 	// i.e. numberOfZeros > 0, tryOracle returned false so we are < B
 	// this implies that we have found a f2 such that f2*m ∈ [N,N+B[
-	fmt.Println("Step 2 finished: f2=", f2, "\n\tfound in ", queries, "steps.")
+	fmt.Println("Step 2 finished: f2=", f2, "\n\tfound in ", stepsFor2, "steps.")
 
 	// Step 3
 	fmt.Println("Starting step 3, this can take a bit longer than the previous ones")
@@ -147,14 +148,14 @@ func main() {
 	// 3.1
 	mmin := divCeil(N, f2)
 	mmax := new(big.Int).Div(nB, f2)
+	BB := new(big.Int).Mul(two, B)
 	diff := new(big.Int).Sub(mmax, mmin)
 	fmt.Println("\tSanity check : (mmax-mmin)*f2 ~B? Okay if this is 'small': B-(mmax-mmin)*f2=",
 		new(big.Int).Sub(B, new(big.Int).Mul(f2, diff)))
 
-	for found := false; !found; {
+	for diff.Sub(mmax, mmin).Cmp(zero) > 0 {
 		stepsFor3++
 		// 3.2
-		BB := new(big.Int).Mul(two, B)
 		ftmp := new(big.Int).Div(BB, diff)
 		// 3.3
 		ftmpmmin := new(big.Int).Mul(ftmp, mmin)
@@ -167,14 +168,10 @@ func main() {
 		if tryOracle(f3, c, e, N) { // then it wasn't padded, >=B
 			mmin = divCeil(iNB, f3)
 		} else { // 3.5b <B
-			mmax = new(big.Int).Div(iNB, f3)
-		}
-
-		diff = new(big.Int).Sub(mmax, mmin)
-		if diff.Cmp(zero) <= 0 { // the range has been narrowed down to one m'
-			found = true
+			mmax.Div(iNB, f3)
 		}
 	}
+
 	fmt.Println("Step 3 finished: \n\tfound m=", mmin)
 	fmt.Println("\tfound in ", stepsFor3, "steps")
 
