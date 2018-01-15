@@ -13,7 +13,7 @@
 // Asymmetric Encryption Padding (OAEP) as Standardized in PKCS #1 v2.0. In J. Kilian,
 // editor, Advances in Cryptology - CRYPTO 2001. (http://iacr.org/archive/crypto2001/21390229.pdf)
 // ------------------ AnomalRoil 2016 >
-package main
+package moddedrsa
 
 import (
 	"crypto"
@@ -155,9 +155,9 @@ func incCounter(c *[4]byte) {
 	c[0]++
 }
 
-// mgf1XOR XORs the bytes in out with a mask generated using the MGF1 function
+// Mgf1XOR XORs the bytes in out with a mask generated using the MGF1 function
 // specified in PKCS#1 v2.1.
-func mgf1XOR(out []byte, hash hash.Hash, seed []byte) {
+func Mgf1XOR(out []byte, hash hash.Hash, seed []byte) {
 	var counter [4]byte
 	var digest []byte
 
@@ -230,8 +230,8 @@ func EncryptOAEP(hash hash.Hash, random io.Reader, pub *PublicKey, msg []byte, l
 		return nil, err
 	}
 
-	mgf1XOR(db, hash, seed)
-	mgf1XOR(seed, hash, db)
+	Mgf1XOR(db, hash, seed)
+	Mgf1XOR(seed, hash, db)
 
 	m := new(big.Int)
 	m.SetBytes(em)
@@ -437,15 +437,15 @@ func DecryptOAEP(hash hash.Hash, random io.Reader, priv *PrivateKey, ciphertext 
 	// to avoid leaking timing information. (Although we still probably
 	// leak the number of leading zeros. It's not clear that we can do
 	// anything about this.)
-	em := leftPad(m.Bytes(), k)
+	em := LeftPad(m.Bytes(), k)
 
 	firstByteIsZero := subtle.ConstantTimeByteEq(em[0], 0)
 
 	seed := em[1 : hash.Size()+1]
 	db := em[hash.Size()+1:]
 
-	mgf1XOR(seed, hash, db)
-	mgf1XOR(db, hash, seed)
+	Mgf1XOR(seed, hash, db)
+	Mgf1XOR(db, hash, seed)
 
 	lHash2 := db[0:hash.Size()]
 
@@ -479,9 +479,17 @@ func DecryptOAEP(hash hash.Hash, random io.Reader, priv *PrivateKey, ciphertext 
 	return rest[index+1:], nil
 }
 
-// leftPad returns a new slice of length size. The contents of input are right
+// -----------------< AnomalRoil 2016
+// NumberOfZeros is  where we cheat: the oracle is the call to our modifed version of
+// LeftPad in the DecryptOAEP func which will populate this variable with the number
+// of zeros it "LeftPadded".
+var NumberOfZeros int
+
+// ------------------ AnomalRoil 2016 >
+
+// LeftPad returns a new slice of length size. The contents of input are right
 // aligned in the new slice.
-func leftPad(input []byte, size int) (out []byte) {
+func LeftPad(input []byte, size int) (out []byte) {
 	n := len(input)
 	if n > size {
 		n = size
@@ -492,7 +500,7 @@ func leftPad(input []byte, size int) (out []byte) {
 	// Let us explicitly get the oracle value for now, this is cheating, of course
 	// in practice an attacker would need to be able to use timings or another mean
 	// to obtain that information.
-	numberOfZeros = len(out) - n
+	NumberOfZeros = len(out) - n
 	// ------------------ AnomalRoil 2016 >
 
 	copy(out[len(out)-n:], input)
