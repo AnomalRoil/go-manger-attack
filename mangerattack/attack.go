@@ -11,6 +11,11 @@ import (
 // countQueries is a counter to know how many queries were necessary
 var countQueries int
 
+// Constants
+const (
+	byteSize = 8
+)
+
 // A few useful big.Int :
 var (
 	zero = new(big.Int).SetInt64(int64(0))
@@ -27,8 +32,8 @@ type Oracle interface {
 	Query() bool
 }
 
-// tryOracle is a function which "ask the oracle"
-func tryOracle(f, c, e, N *big.Int, O Oracle) bool {
+// tryOracle is a function which "ask the oracle". It uses the same names as the paper.
+func tryOracle(f, c, e, N *big.Int, ourOracle Oracle) bool {
 	// We increment our counter
 	countQueries++
 
@@ -38,13 +43,13 @@ func tryOracle(f, c, e, N *big.Int, O Oracle) bool {
 	mcfe := new(big.Int).Mod(cfe, N)
 
 	// we send the value to our oracle
-	O.Decrypt(mcfe)
+	ourOracle.Decrypt(mcfe)
 	// we query our oracle's answer
-	return O.Query()
+	return ourOracle.Query()
 }
 
 // See the 2 modifications made in rsa.go and the file utils.go to get a better understanding.
-func MangerAttack(toDecrypt string, N, e *big.Int, O Oracle) string {
+func MangerAttack(toDecrypt string, N, e *big.Int, ourOracle Oracle) string {
 	// We reset the query counter
 	countQueries = 0
 	// This is the ciphertext we want to decipher
@@ -52,9 +57,9 @@ func MangerAttack(toDecrypt string, N, e *big.Int, O Oracle) string {
 	// We take the byte to decipher and cast them as bit integer
 	c := new(big.Int).SetBytes(bytesToDecipher)
 
-	// We setup k and B
-	k := (N.BitLen() + 7) / 8
-	B := new(big.Int).Exp(two, big.NewInt(int64((k-1)*8)), nil)
+	// We setup k and B as in the paper
+	k := (N.BitLen() + byteSize - 1) / byteSize
+	B := new(big.Int).Exp(two, big.NewInt(int64((k-1)*byteSize)), nil)
 
 	// Assert and sanity checks:
 	// we assume that 2B < n
@@ -70,9 +75,9 @@ func MangerAttack(toDecrypt string, N, e *big.Int, O Oracle) string {
 	fmt.Println("Starting step 1")
 	stepsFor1 := 0
 	// 1.1
-	f1 := new(big.Int).SetInt64(int64(2))
+	f1 := new(big.Int).Set(two)
 	// 1.2
-	for !tryOracle(f1, c, e, N, O) { // We are sure it returns MSB != 0 or == 0
+	for !tryOracle(f1, c, e, N, ourOracle) { // We are sure it returns MSB != 0 or == 0
 		stepsFor1++
 		// 1.3a
 		// Then we are still < B, it returned false
@@ -94,7 +99,7 @@ func MangerAttack(toDecrypt string, N, e *big.Int, O Oracle) string {
 	f2 := new(big.Int).Mul(nBB, f12)
 
 	// 2.2
-	for tryOracle(f2, c, e, N, O) { // 2.3a
+	for tryOracle(f2, c, e, N, ourOracle) { // 2.3a
 		stepsFor2++
 		// i.e. we are >= B, tryOracle returned true
 		f2.Add(f2, f12)
@@ -127,7 +132,7 @@ func MangerAttack(toDecrypt string, N, e *big.Int, O Oracle) string {
 		f3, _ := divCeil(iN, mmin)
 		// 3.5a
 		iNB := new(big.Int).Add(iN, B)
-		if tryOracle(f3, c, e, N, O) { // then it wasn't padded, >=B
+		if tryOracle(f3, c, e, N, ourOracle) { // then it wasn't padded, >=B
 			mmin, _ = divCeil(iNB, f3)
 		} else { // 3.5b <B
 			mmax.Div(iNB, f3)

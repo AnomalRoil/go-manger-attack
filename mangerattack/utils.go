@@ -10,14 +10,14 @@ import (
 	"log"
 	"math/big"
 
-	"git.kudelski.com/go-manger-attack/moddedrsa"
+	"gitlab.kudelski.com/romaille/go-manger-attack/moddedrsa"
 )
 
 // fromBase16 returns a new Big.Int from an hexadecimal string, as found in the go crypto tests suite
 func FromBase16(base16 string) *big.Int {
 	i, ok := new(big.Int).SetString(base16, 16)
 	if !ok {
-		panic("bad number: " + base16)
+		log.Fatalln("bad number: " + base16)
 	}
 	return i
 }
